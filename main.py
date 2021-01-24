@@ -125,15 +125,12 @@ async def test():
 
 @app.get("/record/{uuid}")
 async def record(uuid):
-    lobby, channel = await connect()
-    await login(lobby, os.environ.get('CN_ACCOUNT_NAME'), os.environ.get('CN_ACCOUNT_PASS'))
+    lobby = await ensure_login()
 
     #game_log = await load_and_process_game_log(lobby, "210110-39822d27-fa68-4315-ad33-e60074c682e1")
     #logging.info("game {} result : \n{}".format(game_log.head.uuid, game_log.head.result))
 
     game_json =  await game_log_as_json(lobby, uuid)
-
-    await channel.close()
 
     return game_json 
 
