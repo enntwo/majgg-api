@@ -1,4 +1,5 @@
 from collections import UserDict
+import uvicorn
 from fastapi import FastAPI
 
 import asyncio
@@ -303,21 +304,50 @@ async def game_log_as_json(lobby, uuid):
         elif round_record_wrapper.name == ".lq.RecordDiscardTile":
             discard_tile = pb.RecordDiscardTile()
             discard_tile.ParseFromString(round_record_wrapper.data)
+            newTile = MessageToDict(discard_tile)
+            newTile["TileType"]  = "Discard"
             #jsonOutput[f"Discard{i}"] = MessageToDict(discard_tile)
-            jsonOutput["Game"]["Rounds"][round]["Tile"].append(MessageToDict(discard_tile))
+            jsonOutput["Game"]["Rounds"][round]["Tile"].append(newTile)
 
         elif round_record_wrapper.name == ".lq.RecordDealTile":
             deal_tile = pb.RecordDealTile()
             deal_tile.ParseFromString(round_record_wrapper.data)
+            newTile = MessageToDict(deal_tile)
+            newTile["TileType"] = "Draw"
             #jsonOutput[f"Deal{i}"] = MessageToDict(deal_tile)
-            jsonOutput["Game"]["Rounds"][round]["Tile"].append(MessageToDict(deal_tile))
+            jsonOutput["Game"]["Rounds"][round]["Tile"].append(newTile)
 
         elif round_record_wrapper.name == ".lq.RecordChiPengGang":
             call_tile = pb.RecordChiPengGang()
             call_tile.ParseFromString(round_record_wrapper.data)
-            #jsonOutput[f"Call{i}"] = MessageToDict(call_tile)
-            
+            newTile = MessageToDict(call_tile)
+            # if newTile["type"] == 2:
+            #     newTile["TileType"]  = "OpenKan"
+            # else:    
+            newTile["TileType"]  = "Call"
+            jsonOutput["Game"]["Rounds"][round]["Tile"].append(newTile)
+        
+        elif round_record_wrapper.name == ".lq.RecordBaBei":
+            call_pei = pb.RecordBaBei()
+            call_pei.ParseFromString(round_record_wrapper.data)
+            newTile = MessageToDict(call_pei)
+            newTile["TileType"]  = "Pei"
+            jsonOutput["Game"]["Rounds"][round]["Tile"].append(newTile)
+        
+        elif round_record_wrapper.name == ".lq.RecordAnGangAddGang":
+            add_to_kan = pb.RecordAnGangAddGang()
+            add_to_kan.ParseFromString(round_record_wrapper.data)
+            newTile = MessageToDict(add_to_kan)
+            if newTile["type"] == 2:
+                newTile["TileType"]  = "AddKan"
+            elif newTile["type"] == 3:
+                newTile["TileType"]  = "AnKan"
 
+            newTile["tile"]  = newTile["tiles"]
+            newTile.pop('tiles', None)
+            newTile.pop('type', None)
+            jsonOutput["Game"]["Rounds"][round]["Tile"].append(newTile)
+             
         elif round_record_wrapper.name == ".lq.RecordHule":
             # data = bytearray(round_record_wrapper.data, "utf-8")
             round_result = pb.RecordHuleInfo()
@@ -326,10 +356,14 @@ async def game_log_as_json(lobby, uuid):
             # jsonOutput[f"RoundResult{i}"] = MessageToDict(round_result)
 
         #else:
-        #    jsonOutput[f"UNKNOWN{i}"] = round_record_wrapper.name
+        #    jsonOutput["Game"]["Rounds"][round]["Tile"].append(round_record_wrapper.name)
 
     return jsonOutput
 
 def print_data_as_json(data, type):
     json = MessageToJson(data)
     logging.info("{} json {}".format(type, json))
+
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=8000)
