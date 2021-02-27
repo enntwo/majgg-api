@@ -274,8 +274,18 @@ async def game_log_as_json(lobby, uuid):
     #head.ParseFromString(res)
 
     record_wrapper = pb.Wrapper()
-    record_wrapper.ParseFromString(res.data)
 
+    if res.data_url != "":
+        async with aiohttp.ClientSession() as session:
+            headers = {'content-type': 'text/html; charset=UTF-8'}
+            async with session.get(res.data_url, headers=headers) as response:
+                bData = await response.read()
+        
+        record_wrapper.ParseFromString(bData)
+
+    else:
+        record_wrapper.ParseFromString(res.data)
+        
     game_details = pb.GameDetailRecords()
     game_details.ParseFromString(record_wrapper.data)
 
@@ -283,6 +293,7 @@ async def game_log_as_json(lobby, uuid):
     round_record_wrapper = pb.Wrapper()
 
     jsonOutput["Game"] = MessageToDict(res)["head"]
+    jsonOutput["Game"]["Data_Url"] = res.data_url
     jsonOutput["Game"]["Rounds"] = []
 
     round = -1
