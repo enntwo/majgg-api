@@ -124,6 +124,17 @@ async def test():
 
     return game_json 
 
+@app.get("/live")
+async def live():
+    lobby = cache["lobby"]
+
+    #game_log = await load_and_process_game_log(lobby, "210110-39822d27-fa68-4315-ad33-e60074c682e1")
+    #logging.info("game {} result : \n{}".format(game_log.head.uuid, game_log.head.result))
+
+    game_ids =  await load_game_live_logs(lobby)
+
+    return game_ids 
+
 @app.get("/record/{uuid}")
 async def record(uuid):
     lobby = await ensure_login()
@@ -179,6 +190,7 @@ async def login(lobby, username, password):
     req.device.is_browser = True
     req.random_key = uuid_key
     req.gen_access_token = True
+    req.client_version_string = 'web-0.9.205'
     req.currency_platforms.append(2)
 
     res = await lobby.login(req)
@@ -205,6 +217,20 @@ async def load_game_logs(lobby):
 
     return records
 
+async def load_game_live_logs(lobby):
+    logging.info("Loading live game logs")
+
+    modes =  [216, 215, 225, 226, 224, 223, 212, 211, 208, 209, 221, 222]
+    game_ids = []
+
+    for mode in modes:
+        req = pb.ReqGameLiveList()
+        req.filter_id = mode
+
+        res = await lobby.fetch_game_live_list(req)
+        game_ids.extend([r.uuid for r in res.live_list])
+
+    return game_ids
 
 async def load_and_process_game_log(lobby, uuid):
     logging.info("Loading game log")
@@ -268,6 +294,7 @@ async def game_log_as_json(lobby, uuid):
 
     req = pb.ReqGameRecord()
     req.game_uuid = uuid
+    req.client_version_string = 'web-0.9.205'
     res = await lobby.fetch_game_record(req)
 
     #head = pb.ResGameRecord()
@@ -291,6 +318,8 @@ async def game_log_as_json(lobby, uuid):
 
     game_records_count = len(game_details.records)
     round_record_wrapper = pb.Wrapper()
+
+    tmp = MessageToDict(res)
 
     jsonOutput["Game"] = MessageToDict(res)["head"]
     jsonOutput["Game"]["Data_Url"] = res.data_url
