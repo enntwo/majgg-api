@@ -316,10 +316,13 @@ async def game_log_as_json(lobby, uuid):
     game_details = pb.GameDetailRecords()
     game_details.ParseFromString(record_wrapper.data)
 
-    game_records_count = len(game_details.records)
-    round_record_wrapper = pb.Wrapper()
+    if len(game_details.records) != 0:
+        records = game_details.records
+    elif len(game_details.actions) != 0:
+        records = [action.result for action in game_details.actions if len(action.result) > 0]
 
-    tmp = MessageToDict(res)
+    game_records_count = len(records)
+    round_record_wrapper = pb.Wrapper()
 
     jsonOutput["Game"] = MessageToDict(res)["head"]
     jsonOutput["Game"]["Data_Url"] = res.data_url
@@ -328,7 +331,7 @@ async def game_log_as_json(lobby, uuid):
     round = -1
 
     for i in range(0, game_records_count):
-        round_record_wrapper.ParseFromString(game_details.records[i])
+        round_record_wrapper.ParseFromString(records[i])
 
         if round_record_wrapper.name == ".lq.RecordNewRound":
             round += 1
