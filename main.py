@@ -59,7 +59,7 @@ async def ensure_login():
     except Exception as e:
         logging.info("Ensure_login ERROR: {}".format(e))
         if not channel is None:
-            channel.close()
+            await channel.close()
         cache.pop("lobby", None)
         cache.pop("channel", None)
         await startup_event()
