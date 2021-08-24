@@ -35,6 +35,8 @@ cache = {}
 async def startup_event():
     lobby, channel = await connect()
     await login(lobby, os.environ.get('CN_ACCOUNT_NAME'), os.environ.get('CN_ACCOUNT_PASS'))
+    # cache.pop("lobby", None)
+    # cache.pop("channel", None)
     cache["lobby"] = lobby
     cache["channel"] = channel
 
@@ -58,10 +60,11 @@ async def ensure_login():
         
     except Exception as e:
         logging.info("Ensure_login ERROR: {}".format(e))
-        if not channel is None:
-            await channel.close()
-        cache.pop("lobby", None)
-        cache.pop("channel", None)
+        try:
+            if not channel is None:
+                await channel.close()
+        except Exception as AlreadyClosed:
+            pass
         await startup_event()
         return cache["lobby"]
     
