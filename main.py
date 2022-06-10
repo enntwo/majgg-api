@@ -149,7 +149,8 @@ async def connect():
 
             servers = servers["servers"]
             server = random.choice(servers)
-            endpoint = "wss://{}/".format(server)
+            #endpoint = 'wss://gateway-hw.maj-soul.com/gateway' # /gateway' #"wss://{}/".format(server)
+            endpoint = "wss://{}/gateway".format(server)
 
     logging.info(f"Chosen endpoint: {endpoint}")
     channel = MSRPCChannel(endpoint)
@@ -204,14 +205,18 @@ async def load_game_live_logs(lobby):
     logging.info("Loading live game logs")
 
     modes =  [216, 215, 225, 226, 224, 223, 212, 211, 208, 209, 221, 222]
-    game_ids = []
+    game_ids = {}
 
     for mode in modes:
         req = pb.ReqGameLiveList()
         req.filter_id = mode
 
         res = await lobby.fetch_game_live_list(req)
-        game_ids.extend([r.uuid for r in res.live_list])
+        #game_ids.extend([r.uuid for r in res.live_list])
+        #game_ids.extend(res.live_list)
+        game_ids[mode] = [MessageToDict(r) for r in res.live_list]
+        #for r in res.live_list
+        
 
     return game_ids
 
