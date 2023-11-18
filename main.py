@@ -156,6 +156,8 @@ async def connect():
     channel = MSRPCChannel(endpoint)
 
     lobby = Lobby(channel)
+    lobby.version = version
+  
 
     await channel.connect(MS_HOST)
     logging.info("Connection was established")
@@ -174,7 +176,7 @@ async def login(lobby, username, password):
     req.device.is_browser = True
     req.random_key = uuid_key
     req.gen_access_token = True
-    req.client_version_string = os.environ.get('MJS_CLIENT_VERSION_STRING')
+    req.client_version_string = f"web-{lobby.version.replace('.w', '')}" #os.environ.get('MJS_CLIENT_VERSION_STRING')
     req.currency_platforms.append(2)
 
     res = await lobby.login(req)
@@ -282,7 +284,7 @@ async def game_log_as_json(lobby, uuid):
 
     req = pb.ReqGameRecord()
     req.game_uuid = uuid
-    req.client_version_string = os.environ.get('MJS_CLIENT_VERSION_STRING')
+    req.client_version_string = f"web-{lobby.version.replace('.w', '')}" # os.environ.get('MJS_CLIENT_VERSION_STRING')
     res = await lobby.fetch_game_record(req)
 
     #head = pb.ResGameRecord()
