@@ -306,6 +306,8 @@ async def game_log_as_json(lobby, uuid):
     game_details = pb.GameDetailRecords()
     game_details.ParseFromString(record_wrapper.data)
 
+    records = []
+
     if len(game_details.records) != 0:
         records = game_details.records
     elif len(game_details.actions) != 0:
