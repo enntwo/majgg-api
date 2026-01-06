@@ -141,16 +141,11 @@ async def connect():
             config = await res.json()
             logging.info(f"Config: {config}")
 
-            url = str(config["ip"][0]["region_urls"][1]['url'])
-
-        async with session.get(url + "?service=ws-gateway&protocol=ws&ssl=true") as res:
-            servers = await res.json()
-            logging.info(f"Available servers: {servers}")
-
-            servers = servers["servers"]
-            server = random.choice(servers)
-            #endpoint = 'wss://gateway-hw.maj-soul.com/gateway' # /gateway' #"wss://{}/".format(server)
-            endpoint = "wss://{}/gateway".format(server)
+            url = str(config["ip"][0]["gateways"][1]['url'])
+            logging.info(f"Selected route: {url}")
+            url = url.replace("https://", "")
+            endpoint = "wss://{}/gateway".format(url)
+            logging.info(f"Selected endpoint: {endpoint}")
 
     logging.info(f"Chosen endpoint: {endpoint}")
     channel = MSRPCChannel(endpoint)
