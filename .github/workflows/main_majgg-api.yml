@@ -14,22 +14,34 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@master
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Set up Python version
-      uses: actions/setup-python@v1
-      with:
-        python-version: '3.8'
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          version: "latest"
 
-    - name: Build using AppService-Build
-      uses: azure/appservice-build@v2
-      with:
-        platform: python
-        platform-version: '3.8'
+      - name: Set up Python 3.10
+        run: uv python install 3.10
 
-    - name: 'Deploy to Azure Web App'
-      uses: azure/webapps-deploy@v2
-      with:
-        app-name: 'majgg-api'
-        slot-name: 'production'
-        publish-profile: ${{ secrets.AzureAppService_PublishProfile_312ea528a23b4e48859f8c3e12db6702 }}
+      - name: Install dependencies
+        run: |
+          uv sync --frozen
+          # This creates the .venv using your uv.lock file
+          # We rename it to 'antenv' for Azure compatibility if needed
+          cp -r .venv antenv 
+
+      - name: Zip artifact for deployment
+        run: |
+          zip -r release.zip . -x ".git/*" ".github/*"
+        # We zip the code AND the antenv folder we just built
+
+      - name: 'Deploy to Azure Web App'
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: 'majgg-api'
+          slot-name: 'production'
+          publish-profile: ${{ secrets.AzureAppService_PublishProfile_312ea528a23b4e48859f8c3e12db6702 }}
+          package: release.zip
