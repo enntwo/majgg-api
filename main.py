@@ -13,6 +13,7 @@ from optparse import OptionParser
 
 import aiohttp
 import os
+from dotenv import load_dotenv
 
 from ms.base import MSRPCChannel
 from ms.rpc import Lobby
@@ -22,6 +23,8 @@ from google.protobuf.json_format import MessageToJson, MessageToDict
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s %(levelname)s: %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
 )
+
+load_dotenv()
 
 MS_HOST = os.environ.get('MJS_HOST_URL')
 
@@ -141,16 +144,23 @@ async def connect():
             config = await res.json()
             logging.info(f"Config: {config}")
 
-            url = str(config["ip"][0]["region_urls"][1]['url'])
+            # TODO: add logic to check for region_url list as well, and shuffle logic across the returns routes/gateways. Example here: https://github.com/SAPikachu/amae-koromo-scripts/blob/master/majsoul.js
 
-        async with session.get(url + "?service=ws-gateway&protocol=ws&ssl=true") as res:
-            servers = await res.json()
-            logging.info(f"Available servers: {servers}")
+            url = str(config["ip"][0]["gateways"][1]['url'])
+            logging.info(f"Selected route: {url}")
+            url = url.replace("https://", "")
+            endpoint = "wss://{}/gateway".format(url)
+            logging.info(f"Selected endpoint: {endpoint}")
+            #url = str(config["ip"][0]["region_urls"][1]['url'])
 
-            servers = servers["servers"]
-            server = random.choice(servers)
-            #endpoint = 'wss://gateway-hw.maj-soul.com/gateway' # /gateway' #"wss://{}/".format(server)
-            endpoint = "wss://{}/gateway".format(server)
+        # async with session.get(url + "?service=ws-gateway&protocol=ws&ssl=true") as res:
+        #     servers = await res.json()
+        #     logging.info(f"Available servers: {servers}")
+
+        #     servers = servers["servers"]
+        #     server = random.choice(servers)
+        #     #endpoint = 'wss://gateway-hw.maj-soul.com/gateway' # /gateway' #"wss://{}/".format(server)
+        #     endpoint = "wss://{}/gateway".format(server)
 
     logging.info(f"Chosen endpoint: {endpoint}")
     channel = MSRPCChannel(endpoint)
@@ -284,11 +294,8 @@ async def game_log_as_json(lobby, uuid):
 
     req = pb.ReqGameRecord()
     req.game_uuid = uuid
-    req.client_version_string = f"web-{lobby.version.replace('.w', '')}" # os.environ.get('MJS_CLIENT_VERSION_STRING')
+    req.client_version_string = f"web-{lobby.version.replace('.w', '')}"
     res = await lobby.fetch_game_record(req)
-
-    #head = pb.ResGameRecord()
-    #head.ParseFromString(res)
 
     record_wrapper = pb.Wrapper()
 
@@ -329,19 +336,14 @@ async def game_log_as_json(lobby, uuid):
             round += 1
             round_data = pb.RecordNewRound()
             round_data.ParseFromString(round_record_wrapper.data)
-            #jsonStr += json.dumps(MessageToDict(round_data))
-            #jsonOutput[f"Round{i}"] = MessageToDict(round_data)
             jsonOutput["Game"]["Rounds"].append(MessageToDict(round_data))
             jsonOutput["Game"]["Rounds"][round]["Tile"] = []
-            # jsonOutput.update(MessageToDict(round_data))
-            #jsonParts.append(list(MessageToDict(round_data).items()))
 
         elif round_record_wrapper.name == ".lq.RecordDiscardTile":
             discard_tile = pb.RecordDiscardTile()
             discard_tile.ParseFromString(round_record_wrapper.data)
             newTile = MessageToDict(discard_tile)
             newTile["TileType"]  = "Discard"
-            #jsonOutput[f"Discard{i}"] = MessageToDict(discard_tile)
             jsonOutput["Game"]["Rounds"][round]["Tile"].append(newTile)
 
         elif round_record_wrapper.name == ".lq.RecordDealTile":
@@ -349,16 +351,12 @@ async def game_log_as_json(lobby, uuid):
             deal_tile.ParseFromString(round_record_wrapper.data)
             newTile = MessageToDict(deal_tile)
             newTile["TileType"] = "Draw"
-            #jsonOutput[f"Deal{i}"] = MessageToDict(deal_tile)
             jsonOutput["Game"]["Rounds"][round]["Tile"].append(newTile)
 
         elif round_record_wrapper.name == ".lq.RecordChiPengGang":
             call_tile = pb.RecordChiPengGang()
             call_tile.ParseFromString(round_record_wrapper.data)
             newTile = MessageToDict(call_tile)
-            # if newTile["type"] == 2:
-            #     newTile["TileType"]  = "OpenKan"
-            # else:    
             newTile["TileType"]  = "Call"
             jsonOutput["Game"]["Rounds"][round]["Tile"].append(newTile)
         
